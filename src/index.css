@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #f4f5fb;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #1e2149;
+}
+::-webkit-scrollbar-thumb {
+  background: #4c4f8a;
+  border-radius: 4px;
+}
+
+.sidebar-scroll {
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+}
