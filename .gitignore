@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+/client/node_modules/
+/server/node_modules/
+
+# Production build outputs
+dist/
+build/
+/client/dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment and sensitive configurations
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.settings/
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Oracle wallet & credentials (if placed inside workspace)
+*wallet*
+*.sso
+*.p12
+*.pem
+*.jks
+*.ora
+credentials/
+
+# Internal SQL documentation (developer reference only)
+server/sql/DATABASE_SQL_GUIDE.md
