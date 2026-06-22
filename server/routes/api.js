@@ -40,7 +40,11 @@ import {
   addBook,
   issueBook,
   returnBook,
-  borrowBook
+  borrowBook,
+  updateBook,
+  deleteBook,
+  approveBorrowRequest,
+  rejectBorrowRequest
 } from '../controllers/libraryController.js';
 import {
   getEvents,
@@ -122,8 +126,12 @@ router.get('/parent/grades', getStudentGrades);
 // Library Routes
 router.get('/library/data', getLibraryData);
 router.post('/library/books', addBook);
+router.put('/library/books/:id', updateBook);
+router.delete('/library/books/:id', deleteBook);
 router.post('/library/issue', issueBook);
 router.post('/library/return', returnBook);
+router.post('/library/requests/:id/approve', approveBorrowRequest);
+router.post('/library/requests/:id/reject', rejectBorrowRequest);
 
 // Student Routes
 router.get('/student/data', getStudentData);

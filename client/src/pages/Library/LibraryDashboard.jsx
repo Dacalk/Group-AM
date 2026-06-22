@@ -8,10 +8,11 @@ import {
   AlertTriangle,
   History,
   Plus,
-  Menu
+  Menu,
+  Clock
 } from "lucide-react";
 import ProfilePage from "../ProfilePage";
-import { useDialog } from "../../components/UI";
+import { useDialog, Input, Btn } from "../../components/UI";
 import MessagesPage from "../MessagesPage";
 import Header from "../../components/Header";
 import { PageLoader } from "../../components/NotificationSystem";
@@ -28,14 +29,17 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
   const [students, setStudents] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { alert, DialogHost } = useDialog();
+  const { alert, confirm, DialogHost } = useDialog();
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
 
   // Form states
   const [bookForm, setBookForm] = useState({ title: "", author: "", available: 1 });
+  const [editingBookId, setEditingBookId] = useState(null);
+  const [editBookForm, setEditBookForm] = useState({ title: "", author: "", available: 1 });
   const [issueForm, setIssueForm] = useState({ bookTitle: "", studentName: "" });
 
   const fetchData = async () => {
@@ -95,11 +99,79 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
     }
   };
 
+  const handleApproveRequest = async (txId, bookTitle, studentName) => {
+    const ok = await confirm(
+      `Do you want to approve the request for "${bookTitle}" by student "${studentName}"?`,
+      "Approve Request?",
+      "info",
+      "Approve"
+    );
+    if (!ok) return;
+    try {
+      await api.approveBorrowRequest(txId);
+      await alert("Borrow request approved successfully!", "success", "Success");
+      fetchData();
+    } catch (err) {
+      await alert("Error approving request: " + err.message, "error", "Error");
+    }
+  };
+
+  const handleRejectRequest = async (txId, bookTitle, studentName) => {
+    const ok = await confirm(
+      `Do you want to reject the request for "${bookTitle}" by student "${studentName}"?`,
+      "Reject Request?",
+      "delete",
+      "Reject"
+    );
+    if (!ok) return;
+    try {
+      await api.rejectBorrowRequest(txId);
+      await alert("Borrow request rejected.", "success", "Rejected");
+      fetchData();
+    } catch (err) {
+      await alert("Error rejecting request: " + err.message, "error", "Error");
+    }
+  };
+
+  const handleEditClick = (book) => {
+    setEditingBookId(book.id);
+    setEditBookForm({ title: book.title, author: book.author, available: book.totalCopies });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateBook = async (e) => {
+    e.preventDefault();
+    if (!editBookForm.title || !editBookForm.author) return;
+    try {
+      await api.updateBook(editingBookId, editBookForm);
+      setShowEditModal(false);
+      await alert("Book details updated successfully!", "success", "Success");
+      fetchData();
+    } catch (err) {
+      await alert("Error updating book: " + err.message, "error", "Error");
+    }
+  };
+
+  const handleDeleteBook = async (id, title) => {
+    const ok = await confirm(
+      `This will permanently remove the book "${title}" and all its copies from the catalog.`,
+      `Delete Book?`, 'delete', 'Delete Book'
+    );
+    if (!ok) return;
+    try {
+      await api.deleteBook(id);
+      await alert("Book deleted successfully!", "success", "Deleted");
+      fetchData();
+    } catch (err) {
+      await alert("Error deleting book: " + err.message, "error", "Delete Failed");
+    }
+  };
+
   // Derive stats
   const totalBooks = books.reduce((sum, b) => sum + b.totalCopies, 0);
   const availableBooks = books.reduce((sum, b) => sum + b.available, 0);
   const issuedBooks = transactions.filter(t => t.status === 'Issued').length;
-  const overdueBooks = 0; // Simple fallback or mock
+  const pendingRequests = transactions.filter(t => t.status === 'Requested').length;
 
   const renderContent = () => {
     if (loading) {
@@ -112,7 +184,7 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
         { title: "Total Cataloged Books", value: totalBooks, icon: <BookOpen className="w-6 h-6" /> },
         { title: "Available In Stock", value: availableBooks, icon: <BookMarked className="w-6 h-6" /> },
         { title: "Active Issued Books", value: issuedBooks, icon: <Users className="w-6 h-6" /> },
-        { title: "Overdue Books", value: overdueBooks, icon: <AlertTriangle className="w-6 h-6" /> },
+        { title: "Pending Borrow Requests", value: pendingRequests, icon: <Clock className="w-6 h-6" /> },
       ];
 
       return (
@@ -161,7 +233,10 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
                         <td className="py-3 text-gray-500 text-xs">{t.date}</td>
                         <td className="py-3">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            t.status === 'Returned' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                            t.status === 'Returned' ? 'bg-green-50 text-green-700' :
+                            t.status === 'Issued' ? 'bg-amber-50 text-amber-700' :
+                            t.status === 'Requested' ? 'bg-blue-50 text-blue-700' :
+                            t.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'
                           }`}>
                             {t.status}
                           </span>
@@ -244,6 +319,7 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
                   <th className="pb-3 font-semibold">Total Copies</th>
                   <th className="pb-3 font-semibold">Available Copies</th>
                   <th className="pb-3 font-semibold">Status</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,8 +336,86 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
                         {b.available > 0 ? `In Stock (${b.available}/${b.totalCopies})` : 'Out of Stock'}
                       </span>
                     </td>
+                    <td className="py-3 text-right">
+                      <div className="flex justify-end gap-2.5">
+                        <button
+                          onClick={() => handleEditClick(b)}
+                          className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-650 font-semibold px-2.5 py-1 rounded transition cursor-pointer border-0 outline-none"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBook(b.id, b.title)}
+                          className="text-xs bg-red-50 hover:bg-red-100 text-red-650 font-semibold px-2.5 py-1 rounded transition cursor-pointer border-0 outline-none"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (activePage === "requests") {
+      const borrowRequests = transactions.filter(t => t.status === 'Requested');
+
+      return (
+        <div className="bg-white p-5 rounded-xl shadow border border-gray-100">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-800">Borrow Requests</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Approve or reject student book borrow requests</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="text-gray-500 border-b border-gray-200 pb-2">
+                  <th className="pb-3 font-semibold">Book Title</th>
+                  <th className="pb-3 font-semibold">Requested By</th>
+                  <th className="pb-3 font-semibold">Request Date</th>
+                  <th className="pb-3 font-semibold">Status</th>
+                  <th className="pb-3 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {borrowRequests.map((r) => (
+                  <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="py-3 font-semibold text-gray-800">{r.book}</td>
+                    <td className="py-3 text-gray-600">{r.user}</td>
+                    <td className="py-3 text-gray-500 text-xs">{r.date}</td>
+                    <td className="py-3">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="flex justify-end gap-2.5">
+                        <button
+                          onClick={() => handleApproveRequest(r.id, r.book, r.user)}
+                          className="text-xs bg-green-50 hover:bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-lg transition cursor-pointer border-0 outline-none"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectRequest(r.id, r.book, r.user)}
+                          className="text-xs bg-red-50 hover:bg-red-100 text-red-650 font-bold px-3 py-1.5 rounded-lg transition cursor-pointer border-0 outline-none"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {borrowRequests.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-400">No pending borrow requests found.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -298,7 +452,10 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
                     <td className="py-3 text-gray-500 text-xs">{t.date}</td>
                     <td className="py-3">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        t.status === 'Returned' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                        t.status === 'Returned' ? 'bg-green-50 text-green-700' :
+                        t.status === 'Issued' ? 'bg-amber-50 text-amber-700' :
+                        t.status === 'Requested' ? 'bg-blue-50 text-blue-700' :
+                        t.status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'
                       }`}>
                         {t.status}
                       </span>
@@ -362,61 +519,92 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
           {renderContent()}
         </main>
       </div>
-
-
-      {/* Add Book Modal */}
+            {/* Add Book Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
-          <div className="w-[420px] rounded-xl bg-white p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Add Book to Catalog</h3>
+          <div className="w-[420px] rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 border-b pb-2">Add Book to Catalog</h3>
             <form onSubmit={handleAddBook} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Book Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Clean Code"
-                  value={bookForm.title}
-                  onChange={e => setBookForm({ ...bookForm, title: e.target.value })}
-                  className={fieldBaseClass}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Author</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Robert C. Martin"
-                  value={bookForm.author}
-                  onChange={e => setBookForm({ ...bookForm, author: e.target.value })}
-                  className={fieldBaseClass}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Copies Count</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={bookForm.available}
-                  onChange={e => setBookForm({ ...bookForm, available: e.target.value })}
-                  className={fieldBaseClass}
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
+              <Input
+                label="Book Title *"
+                placeholder="e.g. Clean Code"
+                value={bookForm.title}
+                onChange={e => setBookForm({ ...bookForm, title: e.target.value })}
+              />
+              <Input
+                label="Author *"
+                placeholder="e.g. Robert C. Martin"
+                value={bookForm.author}
+                onChange={e => setBookForm({ ...bookForm, author: e.target.value })}
+              />
+              <Input
+                label="Copies Count *"
+                type="number"
+                placeholder="e.g. 5"
+                value={bookForm.available}
+                onChange={e => setBookForm({ ...bookForm, available: e.target.value })}
+              />
+              <div className="flex gap-3 pt-3 border-t border-gray-100">
+                <Btn
                   type="button"
+                  variant="outline"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 p-2 border border-gray-200 hover:bg-gray-50 rounded-lg text-sm font-semibold cursor-pointer bg-white text-gray-700"
+                  className="flex-1 justify-center"
                 >
                   Cancel
-                </button>
-                <button
+                </Btn>
+                <Btn
                   type="submit"
-                  className="flex-1 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold cursor-pointer border-0"
+                  className="flex-1 justify-center"
                 >
                   Add Book
-                </button>
+                </Btn>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Book Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-[420px] rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 border-b pb-2">Edit Book Details</h3>
+            <form onSubmit={handleUpdateBook} className="space-y-4">
+              <Input
+                label="Book Title *"
+                placeholder="e.g. Clean Code"
+                value={editBookForm.title}
+                onChange={e => setEditBookForm({ ...editBookForm, title: e.target.value })}
+              />
+              <Input
+                label="Author *"
+                placeholder="e.g. Robert C. Martin"
+                value={editBookForm.author}
+                onChange={e => setEditBookForm({ ...editBookForm, author: e.target.value })}
+              />
+              <Input
+                label="Copies Count *"
+                type="number"
+                placeholder="e.g. 5"
+                value={editBookForm.available}
+                onChange={e => setEditBookForm({ ...editBookForm, available: e.target.value })}
+              />
+              <div className="flex gap-3 pt-3 border-t border-gray-100">
+                <Btn
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 justify-center"
+                >
+                  Cancel
+                </Btn>
+                <Btn
+                  type="submit"
+                  className="flex-1 justify-center"
+                >
+                  Save Changes
+                </Btn>
               </div>
             </form>
           </div>
@@ -458,7 +646,7 @@ export default function LibraryDashboard({ onRoleChange, currentUser }) {
                 <button
                   type="button"
                   onClick={() => setShowIssueModal(false)}
-                  className="flex-1 p-2 border border-gray-200 hover:bg-gray-50 rounded-lg text-sm font-semibold cursor-pointer bg-white text-gray-700"
+                  className="flex-1 p-2 border border-gray-200 hover:bg-gray-50 rounded-lg text-sm font-semibold cursor-pointer bg-white text-gray-707"
                 >
                   Cancel
                 </button>
