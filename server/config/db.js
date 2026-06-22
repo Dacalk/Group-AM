@@ -63,5 +63,4 @@ export async function closeDatabase() {
     } catch (err) {
       console.error('Error closing Oracle DB pool:', err.message);
     }
-  }
 }
