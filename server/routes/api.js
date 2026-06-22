@@ -1,59 +1,59 @@
 import express from 'express';
 import { login, getUsers, updatePassword } from '../controllers/authController.js';
 import {
-    getAdminData,
-    addUser,
-    addSubject,
-    addTimetable,
-    addClass,
-    updateClass,
-    deleteClass,
-    createQuiz,
-    updateUser,
-    deleteUser,
-    updateSubject,
-    deleteSubject,
-    updateTimetable,
-    deleteTimetable,
-    deleteQuiz,
-    getAuditLogs,
-    getStudentsList,
-    getDepartmentsList
+  getAdminData,
+  addUser,
+  addSubject,
+  addTimetable,
+  addClass,
+  updateClass,
+  deleteClass,
+  createQuiz,
+  updateUser,
+  deleteUser,
+  updateSubject,
+  deleteSubject,
+  updateTimetable,
+  deleteTimetable,
+  deleteQuiz,
+  getAuditLogs,
+  getStudentsList,
+  getDepartmentsList
 } from '../controllers/adminController.js';
 
 import {
-    getTeacherData,
-    saveAttendance,
-    getAttendanceByDate,
-    getExams,
-    createExam,
-    saveGrades
+  getTeacherData,
+  saveAttendance,
+  getAttendanceByDate,
+  getExams,
+  createExam,
+  saveGrades
 } from '../controllers/teacherController.js';
 import {
-    getParentData,
-    addChild,
-    payInvoice,
-    getStudentGrades
+  getParentData,
+  addChild,
+  payInvoice,
+  getStudentGrades
 } from '../controllers/parentController.js';
 import {
-    getLibraryData,
-    addBook,
-    issueBook,
-    returnBook,
-    borrowBook
+  getLibraryData,
+  addBook,
+  issueBook,
+  returnBook,
+  borrowBook
 } from '../controllers/libraryController.js';
 import {
-    getEvents,
-    addEvent,
-    deleteEvent
+  getEvents,
+  addEvent,
+  deleteEvent
 } from '../controllers/eventController.js';
 import {
-    getMessages,
-    getRecipients,
-    sendMessage,
-    markAsRead,
-    deleteMessage,
-    deleteConversation
+  getMessages,
+  getRecipients,
+  sendMessage,
+  markAsRead,
+  deleteMessage,
+  deleteConversation
 } from '../controllers/messageController.js';
 import { getStudentData } from '../controllers/studentController.js';
 
