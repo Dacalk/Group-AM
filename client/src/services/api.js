@@ -45,9 +45,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(userData)
     }),
-  deleteUser: (id) => 
+  deleteUser: (id, currentUserId) => 
     request('/admin/users/' + id, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: currentUserId ? { 'x-user-id': String(currentUserId) } : {}
     }),
   addSubject: (subjectData) => 
     request('/admin/subjects', {
@@ -155,6 +156,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(bookData)
     }),
+  updateBook: (id, bookData) => 
+    request('/library/books/' + id, {
+      method: 'PUT',
+      body: JSON.stringify(bookData)
+    }),
+  deleteBook: (id) => 
+    request('/library/books/' + id, {
+      method: 'DELETE'
+    }),
   issueBook: (issueData) => 
     request('/library/issue', {
       method: 'POST',
@@ -164,6 +174,14 @@ export const api = {
     request('/library/return', {
       method: 'POST',
       body: JSON.stringify({ transactionId })
+    }),
+  approveBorrowRequest: (id) => 
+    request('/library/requests/' + id + '/approve', {
+      method: 'POST'
+    }),
+  rejectBorrowRequest: (id) => 
+    request('/library/requests/' + id + '/reject', {
+      method: 'POST'
     }),
 
   // Events

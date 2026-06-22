@@ -107,7 +107,6 @@ export async function getTeacherData(req, res) {
           name: s.NAME,
           grade: parts[0] || s.GRADE || '',
           section: parts[1] || 'A',
-          gpa: 3.8, // Mock GPA since STUDENT table does not have a GPA column
           attendanceRate: s.ATTENDANCE_RATE,
           status: s.STATUS || 'ACTIVE'
         };
